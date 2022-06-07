@@ -61,7 +61,7 @@ CREATE TABLE two_hour_mining_reports (
     id SERIAL PRIMARY KEY,
     cdate DATE NOT NULL,
     ctime CTIMES NOT NULL,
-    department_id INTEGER NOT NULL,
+    plant_id INTEGER NOT NULL,
     liquid REAL NOT NULL,
     oil REAL NOT NULL
 );
@@ -75,8 +75,8 @@ CREATE TABLE tanks_reports (
 
 CREATE TABLE water_drop_reports (
     id SERIAL PRIMARY KEY,
-    ctime CTIMES NOT NULL,
-    department_id INTEGER NOT NULL,
+    cdate DATE NOT NULL,
+    plant_id INTEGER NOT NULL,
     volume REAL NOT NULL
 );
 
@@ -84,7 +84,7 @@ DROP TABLE IF EXISTS daily_mining_reports;
 CREATE TABLE daily_mining_reports (
     id SERIAL PRIMARY KEY,
     cdate DATE NOT NULL,
-    department_id INTEGER NOT NULL,
+    plant_id INTEGER NOT NULL,
     liquid REAL NOT NULL,
     oil REAL NOT NULL,
     water_drop REAL NOT NULL,
