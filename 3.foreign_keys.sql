@@ -38,6 +38,12 @@ ALTER TABLE two_hour_mining_reports
     ADD CONSTRAINT two_hour_mining_reports_plant_id_fk
     FOREIGN KEY (plant_id)
     REFERENCES plants(id); 
+
+ALTER TABLE daily_mining_reports
+    DROP CONSTRAINT IF EXISTS daily_mining_plant_id_fk,
+    ADD CONSTRAINT daily_mining_plant_id_fk
+    FOREIGN KEY (plant_id)
+    REFERENCES plants(id); 
     
 ALTER TABLE water_drop_reports
     DROP CONSTRAINT IF EXISTS water_drop_reports_plant_id_fk,
