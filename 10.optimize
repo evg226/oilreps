@@ -1,0 +1,77 @@
+--   10. Для одного из запросов, созданных в пункте 6, провести оптимизацию.
+--         В качестве отчета приложить планы выполнения запроса, ваш анализ и показать действия,
+--         которые улучшили эффективность запроса. 
+
+-- Рассмотрим запрос:
+
+WITH regions AS (
+    SELECT * FROM departments WHERE level_id=2
+), deps as (
+    SELECT  r.id as region_id,r.name as region_name,
+            d.id as dep_id,d.name as dep_name
+        FROM departments d
+        JOIN regions r ON d.parent_id=r.id
+    WHERE d.level_id=3 AND d.type_id=1
+), mining_plants AS (
+    SELECT d.*,p.id as plant_id,p.name as plant_name
+        FROM deps d JOIN plants p ON d.dep_id=p.department_id
+)
+SELECT *
+    FROM mining_plants mp
+    LEFT JOIN daily_mining_reports dmr
+        ON mp.plant_id=dmr.plant_id
+    WHERE dmr.cdate='2022-05-02'
+    ORDER BY region_id,dep_id;
+
+-- Время 90-110 мс
+
+-- Видим, что оптимизация уже частично выполнена, план оптимизации следующий:
+-- 1. В запросах используется Табличные выражения и JOIN, а не вложенные запросы, нет коррелирующих подзапросов
+-- 2. В ON используются первичные ключи, но на внешние ключи нужно создать индексы
+-- 3. EXPLANE ANALIZE показывает с объединение сначала plants P c dmr, а затем с departments D. 
+--     Для ускорения нужно сначала небольшие D и P, затем с dmr.  Объединим ТВ regions с deps и plants - будет один запрос
+-- 4. Создадим индексы на все элементы которые встречаются в ON, WHERE, ORDER BY
+
+
+WITH mining_plants as (
+    SELECT  r.id as region_id,r.name as region_name,
+            d.id as dep_id,d.name as dep_name,
+            p.id as plant_id,p.name as plant_name
+        FROM departments r
+        JOIN departments d
+            ON r.id=d.parent_id
+        JOIN plants p
+            ON d.id=p.department_id
+        WHERE r.level_id=2 AND d.type_id=1
+)
+SELECT *
+    FROM mining_plants mp
+    LEFT JOIN daily_mining_reports dmr
+        ON mp.plant_id=dmr.plant_id
+    WHERE dmr.cdate='2022-05-02'
+    ORDER BY region_id,dep_id;
+
+-- Время 60-95 мс
+
+-- Создаем индексы    
+CREATE INDEX departments_parent_id_idx ON departments(parent_id);
+CREATE INDEX departments_level_id_idx ON departments(level_id);
+CREATE INDEX departments_type_id_idx ON departments(type_id);
+
+CREATE INDEX plants_department_id_idx ON plants(department_id);
+
+CREATE INDEX daily_mining_reports_plant_id_idx ON daily_mining_reports(plant_id);
+CREATE INDEX daily_mining_reports_cdate_idx ON daily_mining_reports(cdate);
+
+--отключаем seq_scan
+SET enable_seqscan TO OFF;
+
+-- Время 50-80 мс
+
+-- оптимизация не дала существенный эффект из-за малого объема данных в таблицах ( 100-500 записей)
+-- таблица отчетов со временем будут большими - каждый день по 1 записи на каждый plant_id, двухчасовки - по 12 записей
+-- Эффект будет значительным. 
+
+SET enable_seqscan TO ON;
+
+    
